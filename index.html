@@ -8,13 +8,14 @@
     <link rel="apple-touch-icon" href="https://i.imgur.com/GLqbAYC.png" referrerpolicy="no-referrer">
     <style>
         :root {
-            --bg-gradient: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dcfce7 100%);
-            --topbar-bg: rgba(255, 255, 255, 0.82);
+            /* കണ്ണിന് സുഖകരമായ ലൈറ്റ് പച്ച ടച്ച് */
+            --bg-gradient: linear-gradient(135deg, #dff5e8 0%, #cbeed9 50%, #b5e6c8 100%);
+            --topbar-bg: rgba(242, 252, 246, 0.88);
             --text-color: #1e293b;
-            --card-bg: rgba(255, 255, 255, 0.94);
+            --card-bg: rgba(255, 255, 255, 0.92);
             --card-shadow: 0 6px 15px rgba(0, 119, 255, 0.08);
             --search-bg: #ffffff;
-            --border-subtle: rgba(0, 119, 255, 0.12);
+            --border-subtle: rgba(0, 150, 80, 0.16);
             --primary-blue: #0077ff;
             --primary-green: #00c853;
         }
@@ -71,18 +72,21 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
-            font-size: 13.5px;
             font-weight: 600;
         }
 
+        /* ടൈമിനും ഡേറ്റിനും ഒരേ വലുപ്പമുള്ള ഫോണ്ട് */
         .info-pill {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
+            gap: 6px;
+            padding: 5px 13px;
             border-radius: 20px;
             background: rgba(0, 119, 255, 0.12);
             color: var(--text-color);
+            font-size: 16.5px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
         }
 
         body.dark-mode .info-pill {
@@ -244,11 +248,11 @@
                 padding: 8px 12px;
             }
             .info-group {
-                font-size: 12px;
                 gap: 6px;
             }
             .info-pill {
-                padding: 3px 8px;
+                font-size: 14.5px;
+                padding: 4px 10px;
             }
         }
     </style>
@@ -258,8 +262,7 @@
     <div class="top-bar">
         <div class="info-group">
             <span class="info-pill" id="timeDisplay">🕒 --:-- --</span>
-            <span class="info-pill" id="locationDisplay">📍 ലൊക്കേഷൻ...</span>
-            <span class="info-pill" id="weatherDisplay">🌤️ --°C</span>
+            <span class="info-pill" id="dateDisplay">📅 --/--/----</span>
         </div>
         <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Day / Night Mode">🌙</button>
     </div>
@@ -284,9 +287,21 @@
             document.getElementById('themeBtn').textContent = isDark ? '☀️' : '🌙';
         }
 
-        // 2. തത്സമയ സമയം (Live Time)
-        function updateTime() {
+        // 2. തത്സമയ സമയവും തീയതിയും (Live Time & Date with Short Weekday)
+        const malayalamDays = [
+            'ഞായർ',
+            'തിങ്കൾ',
+            'ചൊവ്വ',
+            'ബുധൻ',
+            'വ്യാഴം',
+            'വെള്ളി',
+            'ശനി'
+        ];
+
+        function updateTimeAndDate() {
             const now = new Date();
+
+            // സമയം
             let hours = now.getHours();
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
@@ -294,85 +309,18 @@
             hours = hours % 12 || 12;
             const timeStr = `${String(hours).padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
             document.getElementById('timeDisplay').textContent = `🕒 ${timeStr}`;
-        }
-        updateTime();
-        setInterval(updateTime, 1000);
 
-        // 3. ലൊക്കേഷനും കാലാവസ്ഥയും (GPS + IP Fallback)
-        function getWeatherInfo(code) {
-            if (code === 0) return { icon: '☀️', text: 'തെളിഞ്ഞത്' };
-            if (code <= 3) return { icon: '⛅', text: 'മേഘാവൃതം' };
-            if (code <= 48) return { icon: '🌫️', text: 'മഞ്ഞ്' };
-            if (code <= 67) return { icon: '🌧️', text: 'മഴ' };
-            if (code <= 77) return { icon: '❄️', text: 'മഞ്ഞുവീഴ്ച' };
-            if (code <= 82) return { icon: '🌦️', text: 'ചാറ്റൽമഴ' };
-            return { icon: '⛈️', text: 'ഇടിമിന്നൽ' };
+            // തീയതിയും ദിവസവും (DD/MM/YYYY • ദിവസം)
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const weekday = malayalamDays[now.getDay()];
+            document.getElementById('dateDisplay').textContent = `📅 ${day}/${month}/${year} • ${weekday}`;
         }
+        updateTimeAndDate();
+        setInterval(updateTimeAndDate, 1000);
 
-        function fetchWeather(lat, lon) {
-            const weatherEl = document.getElementById('weatherDisplay');
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.current_weather) {
-                        const temp = Math.round(data.current_weather.temperature);
-                        const wInfo = getWeatherInfo(data.current_weather.weathercode);
-                        weatherEl.textContent = `${wInfo.icon} ${temp}°C ${wInfo.text}`;
-                    } else {
-                        weatherEl.textContent = '🌤️ ലഭ്യമല്ല';
-                    }
-                })
-                .catch(() => {
-                    weatherEl.textContent = '🌤️ ലഭ്യമല്ല';
-                });
-        }
-
-        function loadLocationByIP() {
-            const locEl = document.getElementById('locationDisplay');
-            fetch('https://get.geojs.io/v1/ip/geo.json')
-                .then(res => res.json())
-                .then(data => {
-                    const place = data.city || data.region || data.country || 'നിങ്ങളുടെ സ്ഥലം';
-                    locEl.textContent = `📍 ${place}`;
-                    if (data.latitude && data.longitude) {
-                        fetchWeather(data.latitude, data.longitude);
-                    }
-                })
-                .catch(() => {
-                    locEl.textContent = '📍 ലഭ്യമല്ല';
-                });
-        }
-
-        function loadLocationAndWeather() {
-            const locEl = document.getElementById('locationDisplay');
-            if (navigator.geolocation && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)
-                            .then(res => res.json())
-                            .then(data => {
-                                const place = data.city || data.locality || data.principalSubdivision || 'നിങ്ങളുടെ സ്ഥലം';
-                                locEl.textContent = `📍 ${place}`;
-                            })
-                            .catch(() => {
-                                locEl.textContent = '📍 ലൊക്കേഷൻ ലഭിച്ചു';
-                            });
-                        fetchWeather(lat, lon);
-                    },
-                    () => {
-                        loadLocationByIP();
-                    },
-                    { timeout: 5000 }
-                );
-            } else {
-                loadLocationByIP();
-            }
-        }
-        loadLocationAndWeather();
-
-        // 4. Google Sheet ഡാറ്റ ലോഡ് ചെയ്യാൻ
+        // 3. Google Sheet ഡാറ്റ ലോഡ് ചെയ്യാൻ
         const SHEET_ID = '1I-xASF9AxYEmDepozMjTvLAy40tqeQV4gMOMDQ4N8n4';
         let sheetLoaded = false;
 
@@ -459,7 +407,7 @@
         }
         loadGoogleSheet();
 
-        // 5. സെർച്ച് ഫംഗ്ഷൻ
+        // 4. സെർച്ച് ഫംഗ്ഷൻ
         function searchFunction() {
             let input = document.getElementById('searchInput');
             let filter = input.value.toUpperCase();
